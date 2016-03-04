@@ -8,6 +8,7 @@ Build and train the network as follows:
 >>> main.build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=False, num_epochs=500)
 
 Arguments::
+
 	f_train (str): path to the training set file
 	f_val (str): path to the validation set file
 	f_test (str): path to the test set file
@@ -18,5 +19,6 @@ Arguments::
 		or 'cnn' (Convoluted neural network)
 	num_epochs (int, optional): Number of training cycles
 
-Example::
+Example:
+
 >>> build_network('training.csv', 'validation.csv', 'test.csv', (128,128), num_epochs=100)

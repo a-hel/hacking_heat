@@ -19,12 +19,14 @@ Use Google
 The function :py:func:`build_database` queries google image search for the tags and stores the urls and tags in fname.
 
 Arguments::
+
 	fname (str): Filename; if the file already exists, the database will be extended
 	size (int): Number of images to retrieve per tag
 	tags (list): List of Google search terms
 	startIndex (int, optional): Index, from which image to start
 
-Example::
+Example:
+
 >>> build_database('training_set.csv', 20, ['apples', 'oranges'], startIndex=20)
 
 .. note:: Google API has a daily quota of how many images you can retrieve; if you need a bigger database, run the script daily with increaseing startIndex.

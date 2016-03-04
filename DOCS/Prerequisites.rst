@@ -1,7 +1,8 @@
+=============
 Prerequisites
 =============
 
-Hacking_heat runs with Python 2.7. It uses Theano to build and train networks and lasagna to communicate with Theano.
+*Hacking_heat* runs with Python 2.7. It uses Theano to build and train networks and lasagna to communicate with Theano.
 
 Install Theano:
 
