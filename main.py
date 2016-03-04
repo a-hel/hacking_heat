@@ -57,30 +57,6 @@ def _img_stream(tag, credentials, startIndex=0):
             url = item['link']
             yield (url, tag)
 
-def fetch_img(url):
-    imgRequest = urllib2.Request(url)#, headers=headers)
-    try:
-        imgData = urllib2.urlopen(imgRequest).read()
-    except urllib2.HTTPError, e:
-        print "Error at %s:\n%s" % (url, e)
-        return False
-    image_file = io.BytesIO(imgData)
-    try:
-        img = Image.open(image_file)
-    except IOError, e:
-        print "Error at %s:\n%s" % (url, e)
-        return False    
-    return img
-
-def open_img(path):
-    try:
-        img = Image.open(path)
-    except IOError, e:
-        print "Error at %s:\n%s" % (path, e)
-        return False    
-    return img
-
-
 def write_url_list(fname, size, tags):
     #output_data = [[None]] * (size*len(tags))
     output_data = []
@@ -100,63 +76,79 @@ def write_url_list(fname, size, tags):
             f.write("\n")
     return fname
     
-def _adjust_img(img, size=None, flatten=False, greyscale=True, alpha=False):
-	#accomodate for alpha channel
-    if img == False:
-        numeric_img = np.zeros((size[0], size[1], 4), dtype="uint8")
-    else:
-    	if greyscale:
-        	img = img.convert('L')
-    	if size:
-        	img = img.resize(size, Image.ANTIALIAS)
-    	numeric_img = np.asarray(img)
-    if flatten:
-        numeric_img = numeric_img.reshape(-1)
-    ret_val = numeric_img.reshape(-1,28,28)
-    return ret_val[0:1,:,:]
-    #return numeric_img[:,:,0:1]#,0:3] #Correct greyscale shit
-        
-def load_imgs(img_no, source="local", tags=None, fname=None, size=(28,28),
-	flatten=False, greyscale=False, alpha=False):
-    if source == "google":
-        size_per_label = int(img_no/len(tags))
-    elif source == "web":
-        with open(fname, "r") as f:
-            reader = csv.reader(f, delimiter=',')
-            urls = []
-            labels = []
-            for row in reader:
-                urls.append(row[0])
-                labels.append(int(row[1]))
-                #urls = urls[0:img_no]
-                #labels = labels[0:img_no]
-    	labels = np.array(labels, dtype="uint8")
-    	training_imgs = map(fetch_img, urls)
-    elif source == "local":
-    	with open(fname, "r") as f:
-            reader = csv.reader(f, delimiter=',')
-            paths = []
-            labels = []
-            for row in reader:
-                paths.append(row[0])
-                labels.append(int(row[1]))
-                #urls = urls[0:img_no]
-                #labels = labels[0:img_no]
-    	labels = np.array(labels, dtype="uint8")
-    	training_imgs = map(open_img, paths)
-    
-    mapfunc = partial(_adjust_img, size=size, flatten=flatten, greyscale=greyscale,
-    	alpha=alpha)
-    training_imgs = map(mapfunc, training_imgs)
+def _adjust_img(img, size, flatten, greyscale):
+	"""Preprocess the image: Resize, flatten, greyscale"""
 
-    img_array = np.array(training_imgs)
-    return img_array, labels
+	img = img.resize(size, Image.ANTIALIAS)
+	if greyscale:
+		img = img.convert('L')
+	numeric_img = np.asarray(img)
+	# not exactly sure how to handle that in
+	# order to prevent dimension mismatch later
+	if flatten:
+	    numeric_img = numeric_img.reshape(-1)
+	else:
+		numeric_img = numeric_img.reshape(-1,size[0],size[1])
+	return numeric_img
+
+        
+def _get_img(path):
+	"""Create Image object from path"""
+
+	if path.startswith("http"):
+		imgRequest = urllib2.Request(path)#, headers=headers)
+		try:
+		    imgData = urllib2.urlopen(imgRequest).read()
+		except urllib2.HTTPError, e:
+		    print "\nError at %s:\n%s" % (path, e)
+		    return False
+		image_file = io.BytesIO(imgData)
+		try:
+		    img = Image.open(image_file)
+		except IOError, e:
+		    print "\nError at %s:\n%s" % (path, e)
+		    return False
+	else:
+		try:
+			img = Image.open(path)
+		except IOError, e:
+			print "\nError at %s:\n%s" % (path, e)
+			return False
+
+	img = img.convert('RGB')
+	return img
+
+def _read_file(f_name):
+	"""Open file and extract content"""
+
+	with open(f_name, "r") as f:
+		content = f.readlines()
+	content = [line.split(',') for line in content if line not in ["\n",]]
+	paths, labels = zip(*content)
+	labels = [label.rstrip().lstrip() for label in labels]
+	return paths, labels
+
+	#mapfunc = partial(_adjust_img, size=size, flatten=flatten, greyscale=greyscale,
+    #	alpha=None)
+    #processed_img = map(mapfunc, raw_img)
+
+
+
+def _load_dataset(f_name, img_size, greyscale, flatten):
+	"""Load the dataset from f_name and preprocess images"""
+
+	img_paths, labels = _read_file(f_name)
+	raw_imgs = [_get_img(path) for path in img_paths]
+	processed_labels = [labels[i] for i in range(len(labels)) if raw_imgs[i]]
+	processed_imgs = np.array([_adjust_img(raw_img, img_size, greyscale=greyscale,
+		flatten=flatten) for raw_img in raw_imgs if raw_img], dtype='uint8')
+	return processed_imgs, processed_labels
 
 def build_database(fname, size, tags, startIndex=0):
 	"""Build an image database from Google image search.
 	Arguments:
-	fname (str): Filename; if the file already exists, the database will be extended
-	size (int): Number of images to retrieve per tag
+	fname (str): Filename; if the file already exists, the database will be extended
+    size (int): Number of images to retrieve per tag
 	tags (list): List of Google search terms
 	startIndex (int, optional): Index, from which image to start
 
@@ -181,11 +173,22 @@ def build_database(fname, size, tags, startIndex=0):
 				f.write(",".join(url))
 				f.write("\n")
 
+def _gen_lookup_table(label_names):
+	"""Build lookup table to convert numerical to string labels"""
+
+	lookup = {}
+	rev_lookup = {}
+	all_labels = set(label_names)
+	for i, label in enumerate(all_labels):
+		lookup[i] = [label]
+		rev_lookup[label] = i
+	return lookup, rev_lookup
+
 def build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=False,
 	architecture="mlp", num_epochs=500):
 	"""Build and train the network with the given image sets.
 	Arguments:
-	f_train (str): path to the training set file
+	f_train (str): path to the training set file
 	f_val (str): path to the validation set file
 	f_test (str): path to the test set file
 	img_size (tuple): size to which images will be resized
@@ -198,18 +201,39 @@ def build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=Fal
 	Example:
 	build_network('training.csv', 'validation.csv', 'test.csv', (128,128), num_epochs=100)
 	"""
-    pass
+
+   	X_train, y_train_n = _load_dataset(f_train, img_size=img_size, greyscale=greyscale, 
+   		flatten=flatten)
+   	X_val, y_val_n = _load_dataset(f_val, img_size=img_size, greyscale=greyscale, 
+   		flatten=flatten)
+   	X_test, y_test_n = _load_dataset(f_test, img_size=img_size, greyscale=greyscale, 
+   		flatten=flatten)
+   	lookup, rev_lookup = _gen_lookup_table(y_train_n)
+   	y_train = np.array([rev_lookup[label] for label in y_train_n], dtype='uint8')
+   	y_val = np.array([rev_lookup[label] for label in y_val_n], dtype='uint8')
+   	y_test = np.array([rev_lookup[label] for label in y_test_n], dtype='uint8')
+   	if greyscale:
+   		channels = 1
+   	else:
+   		channels = 3
+   	predictions = network.main(X_train, y_train, X_val, y_val, X_test, y_test,
+   		channels=channels, size=img_size, model=architecture, num_epochs=num_epochs)
+   	pred_names = [lookup[lbl] for lbl in predictions]
+   	return pred_names
+
+
         
 
 
 
 if __name__ == "__main__":
-    credentials = get_credentials()
     #fname = "../DATA/urls.csv"
-    fname = "test.csv"
-    size = 5
-    tags = ['Apple', 'Orange']
-    build_database(fname, size=size, tags=tags)
+    f_train = "local_small.csv"
+    f_val = "local_small.csv"
+    f_test = "local_small.csv"
+    img_size = (128,128)
+    print build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=False,
+		architecture="mlp", num_epochs=5)
 
  
 
