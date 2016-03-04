@@ -25,7 +25,7 @@ def get_credentials(f_name="credentials.conf"):
 			credentials[key_.rstrip().lstrip()] = value_.rstrip().lstrip()
 	return credentials
 
-def img_stream(tag, credentials, startIndex=0):
+def _img_stream(tag, credentials, startIndex=0):
     """Search google images for 'tag'.
     Arguments:
     tag (str): Google images search term
@@ -37,11 +37,11 @@ def img_stream(tag, credentials, startIndex=0):
 
 
     service = build("customsearch", "v1",
-               developerKey=credentials[google_key])
+               developerKey=credentials['google_key'])
 
     res = service.cse().list(
         q=tag,
-        cx=credentials[cx],
+        cx=credentials['cx'],
         searchType='image',
         num=3,
         #imgType='clipart',
@@ -115,19 +115,7 @@ def _adjust_img(img, size=None, flatten=False, greyscale=True, alpha=False):
     ret_val = numeric_img.reshape(-1,28,28)
     return ret_val[0:1,:,:]
     #return numeric_img[:,:,0:1]#,0:3] #Correct greyscale shit
-    
-def feature_extraction(img, feat_type="HOG"):
-    """Extract the features from an image.
-    Arguments:
-    img (np.array): The greyscale image as a 2-dimensional numpy array
-    feat_type (str, optional): The type of features to extract.
-
-    Returns: Features according to feat_type
-    """
-
-    return img
-
-    
+        
 def load_imgs(img_no, source="local", tags=None, fname=None, size=(28,28),
 	flatten=False, greyscale=False, alpha=False):
     if source == "google":
@@ -164,6 +152,53 @@ def load_imgs(img_no, source="local", tags=None, fname=None, size=(28,28),
     img_array = np.array(training_imgs)
     return img_array, labels
 
+def build_database(fname, size, tags, startIndex=0):
+	"""Build an image database from Google image search.
+	Arguments:
+	fname (str): Filename; if the file already exists, the database will be extended
+	size (int): Number of images to retrieve per tag
+	tags (list): List of Google search terms
+	startIndex (int, optional): Index, from which image to start
+
+	Example:
+	build_database('training_set.csv', 20, ['apples', 'oranges'], startIndex=20)
+	"""
+
+	if size < 1:
+		raise ValueError, "size must be int greater than 1"
+
+	credentials = get_credentials()
+	for tag in tags:
+		urls = [[]] * size
+		i = 0
+		for img in _img_stream(tag, credentials=credentials, startIndex=startIndex):
+			urls[i] = img
+			i += 1
+			if i >= size:
+				break
+		with open(fname, 'a') as f:
+			for url in urls:
+				f.write(",".join(url))
+				f.write("\n")
+
+def build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=False,
+	architecture="mlp", num_epochs=500):
+	"""Build and train the network with the given image sets.
+	Arguments:
+	f_train (str): path to the training set file
+	f_val (str): path to the validation set file
+	f_test (str): path to the test set file
+	img_size (tuple): size to which images will be resized
+	greyscale (bool, optional): if True, images will be converted to greyscale
+	flatten (bool, optional): if True, images will be flattened
+	architecture (str, optional): Either 'mlp' (multi-layer perceptron)
+		or 'cnn' (Convoluted neural network)
+	num_epochs (int, optional): Number of training cycles
+
+	Example:
+	build_network('training.csv', 'validation.csv', 'test.csv', (128,128), num_epochs=100)
+	"""
+    pass
         
 
 
@@ -171,26 +206,14 @@ def load_imgs(img_no, source="local", tags=None, fname=None, size=(28,28),
 if __name__ == "__main__":
     credentials = get_credentials()
     #fname = "../DATA/urls.csv"
-    fname = "local.csv"
-    size = 20
+    fname = "test.csv"
+    size = 5
     tags = ['Apple', 'Orange']
-    #write_url_list(fname, size, tags)
-    X, y = load_imgs(img_no=-1, source="local", fname=fname, greyscale=False)
-    chunck = int(X.shape[0]/3)
-    X_train = X[0:500,:,:,:]
-    y_train = y[0:500]
-    X_val = X[400:900,:,:,:]
-    y_val = y[400:900]
-    X_test = X[800:1300,:,:,:]
-    y_test = y[800:1300]
-    print X_train.shape
-    print y_train.shape
-    print X_val.shape
-    print y_val.shape
-    print X_test.shape
-    print y_test.shape
+    build_database(fname, size=size, tags=tags)
+
+ 
 
         
-    network.main(X_train, y_train, X_val, y_val, X_test, y_test, num_epochs=5)
+    #network.main(X_train, y_train, X_val, y_val, X_test, y_test, num_epochs=5)
     #image = fetch_img('https://d3nevzfk7ii3be.cloudfront.net/igi/KRLMkuaBjm5mKDDP')
     #print _correct_img(image, size=(128,128), greyscale=False, flatten=False)
