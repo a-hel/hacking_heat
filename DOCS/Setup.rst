@@ -1,3 +1,4 @@
+=====
 Setup
 =====
 
@@ -7,15 +8,14 @@ Download the code from GitHub:
 
 Create an empty file named 'credentials.conf'
 
-Add your Google credentials to the file in the following format:
+Add your Google credentials to the file in the following format::
 
-google_key = [*your google key*]
-cx = [*your cx*]
+    google_key = [your google key]
+    cx = [your cx]
 
-.. :Note: To get your cx, refer to Prerequisites
+.. note:: To get your cx, refer to Prerequisites
 
-.. :Note: To get your google key, go to 
-
+.. note:: To get your google key, go to  
 `Google developers console <https://console.developers.google.com>`_
 
 Create a new project and navigate to the project's dashboard.

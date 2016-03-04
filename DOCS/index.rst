@@ -15,5 +15,6 @@ Contents:
    Setup
    Generate Database
    Build Network
+   Tips and Tricks
 
 
