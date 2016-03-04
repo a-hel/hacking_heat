@@ -100,12 +100,12 @@ def build_custom_mlp(input_var=None, depth=2, width=800, drop_input=.2,
     return network
 
 
-def build_cnn(input_var=None):
+def build_cnn(input_var=None, channels=1, size=(28,28)):
     # As a third model, we'll create a CNN of two convolution + pooling stages
     # and a fully-connected hidden layer in front of the output layer.
 
     # Input layer, as usual:
-    network = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
+    network = lasagne.layers.InputLayer(shape=(None, channels, size[0], size[1]),
                                         input_var=input_var)
     # This time we do not apply input dropout, as it tends to work less well
     # for convolutional layers.
@@ -171,7 +171,7 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def main(X_train, y_train, X_val, y_val, X_test, y_test, 
+def main(X_train, y_train, X_val, y_val, X_test, 
     channels, size, model='mlp', num_epochs=500):
 
     # Prepare Theano variables for inputs and targets
@@ -262,18 +262,9 @@ def main(X_train, y_train, X_val, y_val, X_test, y_test,
     test_err = 0
     test_acc = 0
     test_batches = 0
-    for batch in iterate_minibatches(X_test, y_test, batchsize, shuffle=False): #orig 500
-        inputs, targets = batch
-        err, acc = val_fn(inputs, targets)
-        test_err += err
-        test_acc += acc
-        test_batches += 1
-    print("Final results:")
-    print("  test loss:\t\t\t{:.6f}".format(test_err / test_batches))
-    print("  test accuracy:\t\t{:.2f} %".format(
-        test_acc / test_batches * 100))
 
-    ######### Trying to predict
+
+    ######### Making predictions
 
     test_prediction = lasagne.layers.get_output(network, deterministic=True)
     predict_fn = theano.function([input_var], T.argmax(test_prediction, axis=1))

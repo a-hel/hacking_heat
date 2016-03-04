@@ -3,19 +3,12 @@
 
 import urllib2
 import io
-import csv
-#import cv2
 import lasagne_example as network
-reload(network)
 import numpy as np
-
-from sklearn.cross_validation import train_test_split
-from sklearn.metrics import classification_report
-from sklearn import datasets
 
 from apiclient.discovery import build
 from PIL import Image
-from functools import partial
+
 
 def get_credentials(f_name="credentials.conf"):
 	credentials = {}
@@ -90,8 +83,7 @@ def _adjust_img(img, size, flatten, greyscale):
 	else:
 		numeric_img = numeric_img.reshape(-1,size[0],size[1])
 	return numeric_img
-
-        
+       
 def _get_img(path):
 	"""Create Image object from path"""
 
@@ -128,12 +120,6 @@ def _read_file(f_name):
 	labels = [label.rstrip().lstrip() for label in labels]
 	return paths, labels
 
-	#mapfunc = partial(_adjust_img, size=size, flatten=flatten, greyscale=greyscale,
-    #	alpha=None)
-    #processed_img = map(mapfunc, raw_img)
-
-
-
 def _load_dataset(f_name, img_size, greyscale, flatten):
 	"""Load the dataset from f_name and preprocess images"""
 
@@ -144,34 +130,16 @@ def _load_dataset(f_name, img_size, greyscale, flatten):
 		flatten=flatten) for raw_img in raw_imgs if raw_img], dtype='uint8')
 	return processed_imgs, processed_labels
 
-def build_database(fname, size, tags, startIndex=0):
-	"""Build an image database from Google image search.
-	Arguments:
-	fname (str): Filename; if the file already exists, the database will be extended
-    size (int): Number of images to retrieve per tag
-	tags (list): List of Google search terms
-	startIndex (int, optional): Index, from which image to start
+def _load_testset(f_name, img_size, greyscale, flatten):
+	"""Load the testset from f_name and preprocess images"""
 
-	Example:
-	build_database('training_set.csv', 20, ['apples', 'oranges'], startIndex=20)
-	"""
-
-	if size < 1:
-		raise ValueError, "size must be int greater than 1"
-
-	credentials = get_credentials()
-	for tag in tags:
-		urls = [[]] * size
-		i = 0
-		for img in _img_stream(tag, credentials=credentials, startIndex=startIndex):
-			urls[i] = img
-			i += 1
-			if i >= size:
-				break
-		with open(fname, 'a') as f:
-			for url in urls:
-				f.write(",".join(url))
-				f.write("\n")
+	with open(f_name, "r") as f:
+		img_paths = f.readlines()
+	img_paths = [img_path.rstrip() for img_path in img_paths]
+	raw_imgs = [_get_img(path) for path in img_paths]
+	processed_imgs = np.array([_adjust_img(raw_img, img_size, greyscale=greyscale,
+		flatten=flatten) for raw_img in raw_imgs if raw_img], dtype='uint8')
+	return processed_imgs, img_paths
 
 def _gen_lookup_table(label_names):
 	"""Build lookup table to convert numerical to string labels"""
@@ -206,38 +174,26 @@ def build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=Fal
    		flatten=flatten)
    	X_val, y_val_n = _load_dataset(f_val, img_size=img_size, greyscale=greyscale, 
    		flatten=flatten)
-   	X_test, y_test_n = _load_dataset(f_test, img_size=img_size, greyscale=greyscale, 
+   	X_test, test_urls = _load_testset(f_test, img_size=img_size, greyscale=greyscale, 
    		flatten=flatten)
    	lookup, rev_lookup = _gen_lookup_table(y_train_n)
    	y_train = np.array([rev_lookup[label] for label in y_train_n], dtype='uint8')
    	y_val = np.array([rev_lookup[label] for label in y_val_n], dtype='uint8')
-   	y_test = np.array([rev_lookup[label] for label in y_test_n], dtype='uint8')
    	if greyscale:
    		channels = 1
    	else:
    		channels = 3
-   	predictions = network.main(X_train, y_train, X_val, y_val, X_test, y_test,
+   	predictions = network.main(X_train, y_train, X_val, y_val, X_test,
    		channels=channels, size=img_size, model=architecture, num_epochs=num_epochs)
    	pred_names = [lookup[lbl] for lbl in predictions]
-   	return pred_names
-
-
-        
-
+   	pred_table = zip(test_urls, pred_names)
+   	return pred_table
 
 
 if __name__ == "__main__":
-    #fname = "../DATA/urls.csv"
     f_train = "local_small.csv"
     f_val = "local_small.csv"
-    f_test = "local_small.csv"
+    f_test = "local_small_test.csv"
     img_size = (128,128)
     print build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=False,
 		architecture="mlp", num_epochs=5)
-
- 
-
-        
-    #network.main(X_train, y_train, X_val, y_val, X_test, y_test, num_epochs=5)
-    #image = fetch_img('https://d3nevzfk7ii3be.cloudfront.net/igi/KRLMkuaBjm5mKDDP')
-    #print _correct_img(image, size=(128,128), greyscale=False, flatten=False)
