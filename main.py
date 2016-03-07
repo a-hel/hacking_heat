@@ -152,6 +152,40 @@ def _gen_lookup_table(label_names):
 		rev_lookup[label] = i
 	return lookup, rev_lookup
 
+def build_database(fname, size, tags, startIndex=0):
+        """Build an image database from Google image search.
+        Arguments:
+        fname (str): Filename; if the file already exists, the database will be extended
+    size (int): Number of images to retrieve per tag
+        tags (list): List of Google search terms
+        startIndex (int, optional): Index, from which image to start
+
+        Example:
+        build_database('training_set.csv', 20, ['apples', 'oranges'], startIndex=20)
+        """
+
+        if size < 1:
+                raise ValueError, "size must be int greater than 1"
+
+        credentials = get_credentials()
+        for tag in tags:
+                urls = [[]] * size
+                i = 0
+                for img in _img_stream(tag, credentials=credentials, startIndex=startIndex):
+                        urls[i] = img
+                        i += 1
+                        if i >= size:
+                                break
+                with open(fname, 'a') as f:
+                        for url in urls:
+                                f.write(",".join(url))
+                                f.write("\n")
+
+
+
+
+
+
 def build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=False,
 	architecture="mlp", num_epochs=500):
 	"""Build and train the network with the given image sets.
