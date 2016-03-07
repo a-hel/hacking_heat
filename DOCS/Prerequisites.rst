@@ -8,9 +8,9 @@ Install Theano:
 
 >>> pip install theano
 
-Install lasagna:
+Install lasagne:
 
->>> pip install lasagna
+>>> pip install lasagne
 
 In order to use Google image search, you need to install the Google Python API:
 
