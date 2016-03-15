@@ -3,7 +3,7 @@
 
 import urllib2
 import io
-import lasagne_example as network
+#import lasagne_example as network
 import numpy as np
 
 from apiclient.discovery import build
@@ -22,7 +22,7 @@ def _img_stream(tag, credentials, startIndex=0):
     """Search google images for 'tag'.
     Arguments:
     tag (str): Google images search term
-    credentials: 
+    credentials:
     startIndex (int, optional): First image to retrieve
 
     Returns: The next image
@@ -68,7 +68,7 @@ def write_url_list(fname, size, tags):
             f.write(",".join(line))
             f.write("\n")
     return fname
-    
+
 def _adjust_img(img, size, flatten, greyscale):
 	"""Preprocess the image: Resize, flatten, greyscale"""
 
@@ -83,7 +83,7 @@ def _adjust_img(img, size, flatten, greyscale):
 	else:
 		numeric_img = numeric_img.reshape(-1,size[0],size[1])
 	return numeric_img
-       
+
 def _get_img(path):
 	"""Create Image object from path"""
 
@@ -204,11 +204,11 @@ def build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=Fal
 	build_network('training.csv', 'validation.csv', 'test.csv', (128,128), num_epochs=100)
 	"""
 
-   	X_train, y_train_n = _load_dataset(f_train, img_size=img_size, greyscale=greyscale, 
+   	X_train, y_train_n = _load_dataset(f_train, img_size=img_size, greyscale=greyscale,
    		flatten=flatten)
-   	X_val, y_val_n = _load_dataset(f_val, img_size=img_size, greyscale=greyscale, 
+   	X_val, y_val_n = _load_dataset(f_val, img_size=img_size, greyscale=greyscale,
    		flatten=flatten)
-   	X_test, test_urls = _load_testset(f_test, img_size=img_size, greyscale=greyscale, 
+   	X_test, test_urls = _load_testset(f_test, img_size=img_size, greyscale=greyscale,
    		flatten=flatten)
    	lookup, rev_lookup = _gen_lookup_table(y_train_n)
    	y_train = np.array([rev_lookup[label] for label in y_train_n], dtype='uint8')
@@ -225,9 +225,9 @@ def build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=Fal
 
 
 if __name__ == "__main__":
-    f_train = "local_small.csv"
-    f_val = "local_small.csv"
-    f_test = "local_small_test.csv"
+    f_train = "training.csv"
+    f_val = "validation.csv"
+    f_test = "test.csv"
     img_size = (128,128)
     print build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=False,
 		architecture="mlp", num_epochs=5)
