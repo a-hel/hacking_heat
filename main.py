@@ -3,6 +3,8 @@
 
 import urllib2
 import io
+import time
+import datetime
 import lasagne_example as network
 import numpy as np
 
@@ -18,7 +20,7 @@ def get_credentials(f_name="credentials.conf"):
 			credentials[key_.rstrip().lstrip()] = value_.rstrip().lstrip()
 	return credentials
 
-def _img_stream(tag, credentials, startIndex=0):
+def _img_stream(tag, credentials, size, startIndex=1):
     """Search google images for 'tag'.
     Arguments:
     tag (str): Google images search term
@@ -36,7 +38,8 @@ def _img_stream(tag, credentials, startIndex=0):
         q=tag,
         cx=credentials['cx'],
         searchType='image',
-        num=3,
+        num=size,
+        start=startIndex,
         #imgType='clipart',
         #fileType='png',
         safe= 'off'
@@ -111,14 +114,14 @@ def _get_img(path):
 	return img
 
 def _read_file(f_name):
-	"""Open file and extract content"""
+  """Open file and extract content"""
 
-	with open(f_name, "r") as f:
-		content = f.readlines()
-	content = [line.split(',') for line in content if line not in ["\n",]]
-	paths, labels = zip(*content)
-	labels = [label.rstrip().lstrip() for label in labels]
-	return paths, labels
+  with open(f_name, "r") as f:
+    content = f.readlines()
+  content = [line.split(',') for line in content if line not in ["\n",]]
+  paths, labels = zip(*content)
+  labels = [label.rstrip().lstrip() for label in labels]
+  return paths, labels
 
 def _load_dataset(f_name, img_size, greyscale, flatten):
 	"""Load the dataset from f_name and preprocess images"""
@@ -152,7 +155,7 @@ def _gen_lookup_table(label_names):
 		rev_lookup[label] = i
 	return lookup, rev_lookup
 
-def build_database(fname, size, tags, startIndex=0):
+def build_database(fname, size, tags, startIndex=1):
         """Build an image database from Google image search.
         Arguments:
         fname (str): Filename; if the file already exists, the database will be extended
@@ -168,10 +171,11 @@ def build_database(fname, size, tags, startIndex=0):
                 raise ValueError, "size must be int greater than 1"
 
         credentials = get_credentials()
+        num_imgs = 0
         for tag in tags:
                 urls = [[]] * size
                 i = 0
-                for img in _img_stream(tag, credentials=credentials, startIndex=startIndex):
+                for img in _img_stream(tag, credentials=credentials, size=size, startIndex=startIndex):
                         urls[i] = img
                         i += 1
                         if i >= size:
@@ -180,6 +184,8 @@ def build_database(fname, size, tags, startIndex=0):
                         for url in urls:
                                 f.write(",".join(url))
                                 f.write("\n")
+                num_imgs += len(urls)
+        return num_imgs
 
 
 
@@ -223,11 +229,56 @@ def build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=Fal
    	pred_table = zip(test_urls, pred_names)
    	return pred_table
 
+def deploy_builder(fname, size, tags, startIndex=1):
+  """Runs the script until all results are fetched"""
+
+  chunk_size = 10
+  wait_time = 100
+  for tag in tags:
+    for cycle in xrange(int(size/chunk_size)):
+      build_database(fname=fname, size=chunk_size, tags=[tag,], startIndex=(cycle*chunk_size+1))
+
+      print "Total images: (%s/%s)\n Now looking for '%s'" % (cycle*chunk_size+1, size*len(tags), tag)
+      time.sleep(wait_time)
+    #if retrieved_imgs % daily_quota == 0:
+    #  for i in range(24):
+    #    print "Waking up in %s hours... (interrupt with ctrl+c)\r" % (24-i)
+    #    time.sleep(60*60)
+      
+
+    
 
 if __name__ == "__main__":
-    f_train = "local_small.csv"
-    f_val = "local_small.csv"
-    f_test = "local_small_test.csv"
+    f_train = "train.csv"
+    f_val = "validation.csv"
+    f_test = "test.csv"
     img_size = (128,128)
-    print build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=False,
-		architecture="mlp", num_epochs=5)
+    #print build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=False,
+	#	architecture="mlp", num_epochs=5)
+    #deploy_builder('ofen2.csv', size=500, tags=['vedovn', 'rundbrenner ovn','peis'], startIndex=1)
+    #build_database('ofen.csv', size=100, tags=['peis', 'vedovn','rundbrenner ovn'], startIndex=1)
+    tags = [#'Contura 510 Style', 
+      #'Contura Style', 'Morso 6140', 'Morso 7440', 'Termatech TT20 Bazic', 
+      #'Rais Viva', 'Contura 510 Style', 'Contura Style', 'modern fireplace mantels', 'modern marble fireplace mantels',
+      #' modern stone fireplace', 'modern rustic stone fireplace', 'modern stone fireplace surround', 
+      'traditional fireplaces', 'traditional brick fireplace designs', 'cast iron wood stove', 'gussofen alt']
+    set_size = 1000
+    n_requests = 0
+    credentials = get_credentials('credentials.conf')
+    for tag in tags:
+		with open('%s.csv' % tag, 'a') as f:
+			for i in xrange(set_size/10):
+				startIndex = 1+i*10
+				if startIndex > 91:
+					break
+				for img in _img_stream(tag, credentials=credentials, size=10, startIndex=startIndex):
+					f.write(",".join(img))
+					f.write("\n")
+				n_requests += 10
+				time.sleep(1)
+				#if n_requests > 91:
+				#	print "going to sleep"
+				#	time.sleep(100)
+
+
+
