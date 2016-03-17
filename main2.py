@@ -6,6 +6,7 @@ import io
 import time
 import datetime
 import lasagne_example as network
+reload(network)
 import numpy as np
 
 from apiclient.discovery import build
@@ -92,21 +93,20 @@ def _get_img(path):
 
 	if path.startswith("http"):
 		imgRequest = urllib2.Request(path)#, headers=headers)
-		print path
 		try:
 		    imgData = urllib2.urlopen(imgRequest).read()
 		except urllib2.HTTPError, e:
 		    print "\nError at %s:\n%s" % (path, e)
 		    return False
-    except urllib2.URLError, e:
-        print "\nError at %s:\n%s" % (path, e)
+                except urllib2.URLError, e:
+                    print "\nError at %s:\n%s" % (path, e)
         return False
-		image_file = io.BytesIO(imgData)
-		try:
-		    img = Image.open(image_file)
-		except IOError, e:
-		    print "\nError at %s:\n%s" % (path, e)
-		    return False
+	image_file = io.BytesIO(imgData)
+	try:
+	    img = Image.open(image_file)
+	except IOError, e:
+	    print "\nError at %s:\n%s" % (path, e)
+	    return False
 	else:
 		try:
 			img = Image.open(path)
@@ -248,27 +248,23 @@ def deploy_builder(fname, size, tags, startIndex=1):
     #  for i in range(24):
     #    print "Waking up in %s hours... (interrupt with ctrl+c)\r" % (24-i)
     #    time.sleep(60*60)
-      
 
-    
+
+
 
 if __name__ == "__main__":
-<<<<<<< HEAD
-    f_train = "train.csv"
-=======
-    f_train = "training.csv"
->>>>>>> 2fbf32bdf565716792e2abfcf5b59d112185766b
-    f_val = "validation.csv"
-    f_test = "test.csv"
+    f_train = "t1500.csv"
+    f_val = "v400.csv"
+    f_test = "t20.csv"
     img_size = (128,128)
     #print build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=False,
 	#	architecture="mlp", num_epochs=5)
     #deploy_builder('ofen2.csv', size=500, tags=['vedovn', 'rundbrenner ovn','peis'], startIndex=1)
     #build_database('ofen.csv', size=100, tags=['peis', 'vedovn','rundbrenner ovn'], startIndex=1)
-    tags = [#'Contura 510 Style', 
-      #'Contura Style', 'Morso 6140', 'Morso 7440', 'Termatech TT20 Bazic', 
+    tags = [#'Contura 510 Style',
+      #'Contura Style', 'Morso 6140', 'Morso 7440', 'Termatech TT20 Bazic',
       #'Rais Viva', 'Contura 510 Style', 'Contura Style', 'modern fireplace mantels', 'modern marble fireplace mantels',
-      #' modern stone fireplace', 'modern rustic stone fireplace', 'modern stone fireplace surround', 
+      #' modern stone fireplace', 'modern rustic stone fireplace', 'modern stone fireplace surround',
       'traditional fireplaces', 'traditional brick fireplace designs', 'cast iron wood stove', 'gussofen alt']
     set_size = 1000
     n_requests = 0
@@ -287,6 +283,3 @@ if __name__ == "__main__":
 				#if n_requests > 91:
 				#	print "going to sleep"
 				#	time.sleep(100)
-
-
-
