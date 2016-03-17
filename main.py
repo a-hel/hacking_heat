@@ -24,7 +24,7 @@ def _img_stream(tag, credentials, size, startIndex=1):
     """Search google images for 'tag'.
     Arguments:
     tag (str): Google images search term
-    credentials: 
+    credentials:
     startIndex (int, optional): First image to retrieve
 
     Returns: The next image
@@ -71,7 +71,7 @@ def write_url_list(fname, size, tags):
             f.write(",".join(line))
             f.write("\n")
     return fname
-    
+
 def _adjust_img(img, size, flatten, greyscale):
 	"""Preprocess the image: Resize, flatten, greyscale"""
 
@@ -86,7 +86,7 @@ def _adjust_img(img, size, flatten, greyscale):
 	else:
 		numeric_img = numeric_img.reshape(-1,size[0],size[1])
 	return numeric_img
-       
+
 def _get_img(path):
 	"""Create Image object from path"""
 
@@ -97,6 +97,9 @@ def _get_img(path):
 		except urllib2.HTTPError, e:
 		    print "\nError at %s:\n%s" % (path, e)
 		    return False
+    except urllib2.URLError, e:
+        print "\nError at %s:\n%s" % (path, e)
+        return False
 		image_file = io.BytesIO(imgData)
 		try:
 		    img = Image.open(image_file)
@@ -210,11 +213,11 @@ def build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=Fal
 	build_network('training.csv', 'validation.csv', 'test.csv', (128,128), num_epochs=100)
 	"""
 
-   	X_train, y_train_n = _load_dataset(f_train, img_size=img_size, greyscale=greyscale, 
+   	X_train, y_train_n = _load_dataset(f_train, img_size=img_size, greyscale=greyscale,
    		flatten=flatten)
-   	X_val, y_val_n = _load_dataset(f_val, img_size=img_size, greyscale=greyscale, 
+   	X_val, y_val_n = _load_dataset(f_val, img_size=img_size, greyscale=greyscale,
    		flatten=flatten)
-   	X_test, test_urls = _load_testset(f_test, img_size=img_size, greyscale=greyscale, 
+   	X_test, test_urls = _load_testset(f_test, img_size=img_size, greyscale=greyscale,
    		flatten=flatten)
    	lookup, rev_lookup = _gen_lookup_table(y_train_n)
    	y_train = np.array([rev_lookup[label] for label in y_train_n], dtype='uint8')
@@ -249,7 +252,11 @@ def deploy_builder(fname, size, tags, startIndex=1):
     
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     f_train = "train.csv"
+=======
+    f_train = "training.csv"
+>>>>>>> 2fbf32bdf565716792e2abfcf5b59d112185766b
     f_val = "validation.csv"
     f_test = "test.csv"
     img_size = (128,128)
