@@ -1,11 +1,13 @@
 """Main workflow for 'hacking heat'"""
 
+from __future__ import print_function
 
 import urllib2
 import io
 import time
 import datetime
-import lasagne_example as network
+import build_cnn as network
+reload(network)
 import numpy as np
 
 from apiclient.discovery import build
@@ -50,7 +52,7 @@ def _img_stream(tag, credentials, size, startIndex=1):
     ).execute()
 
     if not 'items' in res:
-        print 'No result !!\nres is: {}'.format(res)
+        print('No result !!\nres is: {}'.format(res))
     else:
         for item in res['items']:
             url = item['link']
@@ -98,22 +100,22 @@ def _get_img(path):
         try:
             imgData = urllib2.urlopen(imgRequest).read()
         except urllib2.HTTPError, e:
-            print "\nError at %s:\n%s" % (path, e)
+            print("\nError at '%s':\n>>> %s" % (path, e))
             return False
         except urllib2.URLError, e:
-            print "\nError at %s:\n%s" % (path, e)
+            print("\nError at '%s':\n>>> %s" % (path, e))
             return False
         image_file = io.BytesIO(imgData)
         try:
             img = Image.open(image_file)
         except IOError, e:
-            print "\nError at %s:\n%s" % (path, e)
+            print("\nError at '%s':\n>>> %s" % (path, e))
             return False
     else:
         try:
             img = Image.open(path)
         except IOError, e:
-            print "\nError at %s:\n%s" % (path, e)
+            print("\nError at '%s':\n>>> %s" % (path, e))
             return False
 
     img = img.convert('RGB')
@@ -143,8 +145,7 @@ def _load_testset(f_name, img_size, greyscale, flatten):
     """Load the testset from f_name and preprocess images"""
 
     with open(f_name, "r") as f:
-        img_paths = f.readlines()
-    img_paths = [img_path.rstrip() for img_path in img_paths]
+        img_paths = [img_path.rstrip() for img_path in f]
     raw_imgs = [_get_img(path) for path in img_paths]
     processed_imgs = np.array([_adjust_img(raw_img, img_size, greyscale=greyscale,
         flatten=flatten) for raw_img in raw_imgs if raw_img], dtype='uint8')
@@ -195,8 +196,35 @@ def build_database(fname, size, tags, startIndex=1):
         num_imgs += len(urls)
     return num_imgs
 
+def show_set(fname, target):
+    urls, labels = _read_file(fname)
+    lines = zip(urls, labels)
+    write_to_html(lines, target)
+
+def write_to_html(classes, fname):
+
+    header = """
+<html>
+<head>
+<title>Predictions</title>
+</head>
+<body>"""
+    footer = """
+</body>
+</html>"""
+    img_line = """
+    <p><a href='%s', title='%s'>
+    <img width=128, height=128, src='%s'></a>%s</p>
+    """
+    with open(fname, 'w') as f:
+        f.write(header)
+        for (url, tag) in classes:
+            f.write(img_line % (url, tag[0], url, tag[0]))
+        f.write(footer)
+    return fname
+
 def build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=False,
-    architecture="mlp", num_epochs=500):
+    num_epochs=500):
     """Build and train the network with the given image sets.
     Arguments:
     f_train (str): path to the training set file
@@ -227,7 +255,7 @@ def build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=Fal
     else:
         channels = 3
     predictions = network.main(X_train, y_train, X_val, y_val, X_test,
-        channels=channels, size=img_size, model=architecture, num_epochs=num_epochs)
+        channels=channels, size=img_size, num_epochs=num_epochs)
     pred_names = [lookup[lbl] for lbl in predictions]
     pred_table = zip(test_urls, pred_names)
     return pred_table
@@ -242,39 +270,46 @@ def deploy_builder(fname, size, tags, startIndex=1):
         build_database(fname=fname, size=chunk_size, tags=[tag,], 
             startIndex=(cycle*chunk_size+1))
 
-        print "Total images: (%s/%s)\n Now looking for '%s'" % \
-            (cycle*chunk_size+1, size*len(tags), tag)
+        print("Total images: (%s/%s)\n Now looking for '%s'" % \
+            (cycle*chunk_size+1, size*len(tags), tag))
         time.sleep(wait_time)
 
 
 if __name__ == "__main__":
-    f_train = "t1500.csv"
-    f_val = "v400.csv"
-    f_test = "t20.csv"
+    f_train = "_local/train_yb.csv"
+    f_val = "_local/val_yb.csv"
+    f_test = "_local/test_yb_large.csv"
+
+    #show_set(f_train, '_local/training.html')
+    #show_set(f_val, '_local/validation.html')
+    #5/0
     img_size = (128,128)
-    print build_network(f_train, f_val, f_test, img_size, greyscale=False, flatten=False,
-        architecture="mlp", num_epochs=5)
+    predictions = build_network(f_train, f_val, f_test, img_size, greyscale=True, flatten=False,
+        num_epochs=500)
+    write_to_html(predictions, "_local/predictions.html")
+    #print(\a)
     #deploy_builder('ofen2.csv', size=500, tags=['vedovn', 'rundbrenner ovn','peis'], startIndex=1)
-    #build_database('ofen.csv', size=100, tags=['peis', 'vedovn','rundbrenner ovn'], startIndex=1)
+   # build_database('ofen.csv', size=100, tags=['peis', 'vedovn','rundbrenner ovn'], startIndex=1)
     #tags = [#'Contura 510 Style',
       #'Contura Style', 'Morso 6140', 'Morso 7440', 'Termatech TT20 Bazic',
       #'Rais Viva', 'Contura 510 Style', 'Contura Style', 'modern fireplace mantels', 'modern marble fireplace mantels',
       #' modern stone fireplace', 'modern rustic stone fireplace', 'modern stone fireplace surround',
     #  'traditional fireplaces', 'traditional brick fireplace designs', 'cast iron wood stove', 'gussofen alt']
-    #set_size = 1000
+    #tags = ['yoshi', 'bowser']
+    #set_size = 100
     #n_requests = 0
     #credentials = get_credentials('credentials.conf')
     #for tag in tags:
-        #with open('%s.csv' % tag, 'a') as f:
-        #   for i in xrange(set_size/10):
-        #       startIndex = 1+i*10
-        #       if startIndex > 91:
-        #           break
-        #       for img in _img_stream(tag, credentials=credentials, size=10, startIndex=startIndex):
-        #           f.write(",".join(img))
-        #           f.write("\n")
-        #       n_requests += 10
-        #       time.sleep(1)
+    #    with open('%s.csv' % tag, 'a') as f:
+    #       for i in xrange(set_size/10):
+    #           startIndex = 1+i*10
+    #           if startIndex > 91:
+    #               break
+    #           for img in _img_stream(tag, credentials=credentials, size=10, startIndex=startIndex):
+    #               f.write(",".join(img))
+    #               f.write("\n")
+    #           n_requests += 10
+    #           time.sleep(1)
                 #if n_requests > 91:
                 #   print "going to sleep"
                 #   time.sleep(100)
