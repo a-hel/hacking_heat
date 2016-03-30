@@ -21,7 +21,7 @@ The files, preferrably saved as *.csv*, have the following format::
 
 <path/to/img1.jpg>,<label_of_img_1>
 <path/to/img2.jpg>,<label_of_img_2>
-...
+<...>
 <path/to/img2.jpg>,<label_of_img_n>
 
 In the test set, omit the "," and label.
@@ -32,14 +32,15 @@ To build the database, pass this file to
 
 Arguments::
 
-name (str): Name of the database file to be built
-fname (str): Name of the file containing the image paths
-img_size (tuple of ints, optional): Size to which images will be resize. Make sure the important features will still be recognizeable in the new size, but keep in mind that larger image size will require more resources.
+	name (str): Name of the database file to be built
+	fname (str): Name of the file containing the image paths
+	img_size (tuple of ints, optional): Size to which images will be resize. Make sure the important features will still be recognizeable in the new size, but keep in mind that larger image size will require more resources.
 greyscale (bool, optional): Convert the image to greyscale. Default is False.
-flaten (bool, optional): Convert the image data into a 1D array. Default is False.
-istest (bool, optional): Set to True if the file is part of the test set, i.e. does not contain labels.
+	flatten (bool, optional): Convert the image data into a 1D array. Default is False.
+	istest (bool, optional): Set to True if the file is part of the test set, i.e. does not contain labels.
 
 Example:
+
 >>> pack('validation_db', 'validation_imgs.csv', img_size=(128, 128))
 
 This will produce the file 'validation_db.hdf5' with all the image and label data, as well as a 'validation_db.txt' file that contains the path to the HDF5 file. The text file is a requirement for the correct working of Mocha.
@@ -76,10 +77,10 @@ You can store images from URL's locally using
 
 Arguments::
 
-sourcefile (str): The csv file containing the URL's
-target_folder (str): The folder where to store the downloaded images. Will raise an exception if the folder does not exist
-base_folder (str): If the target folder is not in the current working directory, specify its location here.
-filetype (str, optional): The file format of the images, default is jpeg.
+	sourcefile (str): The csv file containing the URL's
+	target_folder (str): The folder where to store the downloaded images. Will raise an exception if the folder does not exist
+	base_folder (str): If the target folder is not in the current working directory, specify its location here.
+	filetype (str, optional): The file format of the images, default is jpeg.
 
 This function is handy if you built a database from google, but wish to have a local copy of your images. It automatically build a new csv with the new path information.
 
