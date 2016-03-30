@@ -17,7 +17,7 @@ Internally, *hacking_heat* relies on HDF5 files for storing the images and label
 
 The easiest way to build the database is to use a file list with references to your images. The references can be local paths or URLs. The training and validation sets need furthermore the class label associated with the image.
 
-The files, preferrably saved as *.csv*, have the following format:
+The files, preferrably saved as *.csv*, have the following format::
 
 <path/to/img1.jpg>,<label_of_img_1>
 <path/to/img2.jpg>,<label_of_img_2>
@@ -30,7 +30,8 @@ To build the database, pass this file to
 
 >>> pack(name, fname, img_size=(227,227), greyscale=False, flatten=False, istest=False))
 
-Arguments:
+Arguments::
+
 name (str): Name of the database file to be built
 fname (str): Name of the file containing the image paths
 img_size (tuple of ints, optional): Size to which images will be resize. Make sure the important features will still be recognizeable in the new size, but keep in mind that larger image size will require more resources.
@@ -38,7 +39,8 @@ greyscale (bool, optional): Convert the image to greyscale. Default is False.
 flaten (bool, optional): Convert the image data into a 1D array. Default is False.
 istest (bool, optional): Set to True if the file is part of the test set, i.e. does not contain labels.
 
-Example: pack('validation_db', 'validation_imgs.csv', img_size=(128, 128))
+Example:
+>>> pack('validation_db', 'validation_imgs.csv', img_size=(128, 128))
 
 This will produce the file 'validation_db.hdf5' with all the image and label data, as well as a 'validation_db.txt' file that contains the path to the HDF5 file. The text file is a requirement for the correct working of Mocha.
 
@@ -72,7 +74,7 @@ You can store images from URL's locally using
 >>> img_downloader(sourcefile, target_folder, base_folder="IMG/",
 	filetype="JPEG")
 
-Arguments:
+Arguments::
 
 sourcefile (str): The csv file containing the URL's
 target_folder (str): The folder where to store the downloaded images. Will raise an exception if the folder does not exist

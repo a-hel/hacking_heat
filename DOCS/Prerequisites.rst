@@ -2,17 +2,21 @@
 Prerequisites
 =============
 
-*Hacking_heat* runs with Python 2.7. It uses Theano to build and train networks and lasagna to communicate with Theano.
+*Hacking_heat* contains two modules, one to build and train the network (build_network.jl) and one to prepare the data (build_db.py).
+ 
+If you want to prepare your data manually, you do not necessarily need the build_db.py script. However, it is recommended as it assures the correct format of the data.
 
-Install Theano:
+To build and train the network, *hacking_heat* uses the juila package 'Mocha'. If you do not have julia installed, you can download it from the project homepage `www.julialang.org <http://www.julialang.org>`_.
 
->>> pip install theano
+From the julia command line, install Mocha:
 
-Install lasagne:
+>>> Pkg.add("Mocha")
 
->>> pip install lasagne
+This conveniently installs all dependencies, most importantly HDF5 support.
 
-In order to use Google image search, you need to install the Google Python API:
+
+
+If you want to use Google image search to build your image database, you need to install the Google Python API:
 
 >>> pip install --upgrade google-api-python-client
 
@@ -26,3 +30,8 @@ You furthermore need a Google account, where you have to activate the CustomSear
 - Activate 'Image search'
 - On 'Sites to search', select 'Search the entire web but emphasize included sites'
 - Get the engine's cx by clicking the 'Search engine ID'. Save the ID in a file.
+
+Cuda support
+-------------
+
+Mocha.jl supports the use of Cuda, which uses your machines GPU to accelerate the training of your network. In order to install and use it, please refer to the CUDA documentation: `https://developer.nvidia.com/cuda-toolkit <https://developer.nvidia.com/cuda-toolkit>`_.
