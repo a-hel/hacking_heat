@@ -3,7 +3,9 @@ ENV["MOCHA_USE_NATIVE_EXT"] = "true"
 using Mocha
 using HDF5
 
-function _get_common_layers(n_classes=2)
+function _get_common_layers(n_classes=3)
+	# AH: n_classes: Number of classes in order to correctly format the output layer
+	# Return the main network architecture, minus the input layer and the analysis layer. 
 	# Reference:
 	# http://nbviewer.jupyter.org/github/pluskid/Mocha.jl/blob/master/examples/ijulia/ilsvrc12/imagenet-classifier.ipynb
 	layers = [
@@ -13,40 +15,40 @@ function _get_common_layers(n_classes=2)
 	  #    data = Array[zeros(img_width, img_height, img_channels, batch_size)])
 	  #ConvolutionLayer(name="conv1", bottoms=[:data], tops=[:conv1],
 	  #    kernel=(11,11), stride=(4,4), n_filter=96, neuron=Neurons.ReLU())
-	  ConvolutionLayer(name="conv1", n_filter=48, kernel=(11,11), stride=(4,4),
+	  ConvolutionLayer(name="conv1", n_filter=96, kernel=(11,11), stride=(4,4),
     	bottoms=[:data], tops=[:conv1])
 	  PoolingLayer(name="pool1", tops=[:pool1], bottoms=[:conv1],
 	      kernel=(3,3), stride=(2,2), pooling=Pooling.Max())
 	  LRNLayer(name="norm1", tops=[:norm1], bottoms=[:pool1],
 	      kernel=5, scale=0.0001, power=0.75)
 	  ConvolutionLayer(name="conv2", tops=[:conv2], bottoms=[:norm1],
-	      kernel=(5,5), pad=(2,2), n_filter=96, n_group=2, neuron=Neurons.ReLU())
+	      kernel=(5,5), pad=(2,2), n_filter=256, n_group=2, neuron=Neurons.ReLU())
 	  PoolingLayer(name="pool2", tops=[:pool2], bottoms=[:conv2],
 	      kernel=(3,3), stride=(2,2), pooling=Pooling.Max())
 	  LRNLayer(name="norm2", tops=[:norm2], bottoms=[:pool2],
 	      kernel=5, scale=0.0001, power=0.75)
 	  ConvolutionLayer(name="conv3", tops=[:conv3], bottoms=[:norm2],
-	      kernel=(3,3), pad=(1,1), n_filter=256, neuron=Neurons.ReLU())
+	      kernel=(3,3), pad=(1,1), n_filter=384, neuron=Neurons.ReLU())
 	  ConvolutionLayer(name="conv4", tops=[:conv4], bottoms=[:conv3],
-	      kernel=(3,3), pad=(1,1), n_filter=256, n_group=2, neuron=Neurons.ReLU())
+	      kernel=(3,3), pad=(1,1), n_filter=384, n_group=2, neuron=Neurons.ReLU())
 	  ConvolutionLayer(name="conv5", tops=[:conv5], bottoms=[:conv4],
-	      kernel=(3,3), pad=(1,1), n_filter=96, n_group=2, neuron=Neurons.ReLU())
+	      kernel=(3,3), pad=(1,1), n_filter=256, n_group=2, neuron=Neurons.ReLU())
 	  PoolingLayer(name="pool5", tops=[:pool5], bottoms=[:conv5],
 	      kernel=(3,3), stride=(2,2), pooling=Pooling.Max())
 	  InnerProductLayer(name="fc6", tops=[:fc6], bottoms=[:pool5],
-	      output_dim=2048, neuron=Neurons.ReLU())
+	      output_dim=4096, neuron=Neurons.ReLU())
 	  InnerProductLayer(name="fc7", tops=[:fc7], bottoms=[:fc6],
 	      output_dim=2048, neuron=Neurons.ReLU())
-	  #InnerProductLayer(name="fc8", tops=[:fc8], bottoms=[:fc7],
-	  #    output_dim=1000)
-	  InnerProductLayer(name="fc8", output_dim=n_classes,
-	    bottoms=[:fc7], tops=[:fc8])
+	  InnerProductLayer(name="fc8", tops=[:fc8], bottoms=[:fc7],
+	      output_dim=n_classes)
+	  #InnerProductLayer(name="fc8", output_dim=n_classes,
+	  #  bottoms=[:fc7], tops=[:fc8])
 	]
 	return layers
 end
 
 
-function _training_setup(backend, name="train-data", source="data/yb-train.txt",
+function _training_setup(backend, name="train-data", source="data/oven-train.txt",
 )
 	data_layer  = AsyncHDF5DataLayer(name="data", source=source,
     	batch_size=64, shuffle=true)
@@ -60,7 +62,7 @@ function _solver_setup(test_net)
 	exp_dir = "snapshots"
 	method = SGD()
 	#max_iter=10000
-	params = make_solver_parameters(method, max_iter=200, regu_coef=0.0005,
+	params = make_solver_parameters(method, max_iter=10000, regu_coef=0.0005,
 	    mom_policy=MomPolicy.Fixed(0.9),
 	    lr_policy=LRPolicy.Inv(0.01, 0.0001, 0.75),
 	    load_from=exp_dir)
@@ -74,7 +76,7 @@ function _solver_setup(test_net)
 end
 
 function _validation_setup(backend, name="validation-data",
-		source="data/yb-validation.txt")
+		source="data/oven-val.txt")
 	data_layer_test = AsincHDF5DataLayer(name=name, source=source,
 		batch_size=100)
 	acc_layer = AccuracyLayer(name="test-accuracy", bottoms=[:fc8, :label])
@@ -102,8 +104,11 @@ function _get_common_layers2(n_classes=2)
 end
 
 function _test_setup(backend)
+	img_x = 227
+	img_y = 227
+	channels = 3
 	mem_data = MemoryDataLayer(name="data", tops=[:data], batch_size=1,
-    data=Array[zeros(Float64, 227, 227, 3, 1)])
+    data=Array[zeros(Float64, img_x, img_y, channels, 1)])
     common_layers = _get_common_layers()
 	softmax_layer = SoftmaxLayer(name="prob", tops=[:prob], bottoms=[:fc8])
 	net = Net("imagenet", backend, [mem_data, common_layers..., softmax_layer])
@@ -120,7 +125,9 @@ function run_training(backend="cpu")
 	init(backend)
 
 	train_net = _training_setup(backend)
+	println(train_net)
 	test_net = _test_setup(backend)
+	println(test_net)
 	solver = _solver_setup(test_net)
 	solve(solver, train_net)
 	destroy(train_net)
@@ -140,7 +147,7 @@ function run_prediction(backend="cpu")
 	prediction_net = _test_setup(backend)
 	load_snapshot(prediction_net, "snapshots/snapshot-000200.jld")
 
-	h5open("data/yb-test.hdf5") do f
+	h5open("data/oven-test.hdf5") do f
 		i = 1
 		img_data = f["data"]
 		width, height, channels, n_imgs = size(img_data)
